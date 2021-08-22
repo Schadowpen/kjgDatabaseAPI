@@ -5,7 +5,7 @@ Das Frontend befindet sich unter https://github.com/Schadowpen/kjgBuchung
 Es ist geplant, das Projekt als WordPress-Plugin komplett neu zu schreiben.
 
 
-#IDE
+# IDE
 Als Entwicklungsumgebung wird PHPStorm empfohlen.
 
 
