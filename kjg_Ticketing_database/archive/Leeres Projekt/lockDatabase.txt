@@ -1,0 +1,1 @@
+Diese Datei muss blockiert werden, bevor mit der Datenbank interagiert wird, damit nur ein PHP-Skript gleichzeitig die Datenbank bearbeitet.
