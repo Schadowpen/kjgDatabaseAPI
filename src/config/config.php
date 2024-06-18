@@ -15,7 +15,7 @@ $databaseRootFolder = $_SERVER["DOCUMENT_ROOT"] . "/../kjg_Ticketing_database/";
  * Um einen aktuell gültigen Schlüssel zu erhalten, muss der Sicherheitsschlüssel mit dem aktuellen Datum und Uhrzeit im Format 'YYYY-MM-DDThh:mm' erweitert werden
  * und dann mit SHA256 gehasht werden.
  */
-$securityKey = "7aAycJkMe0rGU8w2ObPvx2dbCqorX6mwoNrLS62xxRCXT4ezLh";
+$securityKey = "lrzjkwxcxijgwzjbragkenofadshuizhl";
 
 /**
  * Verzeichnis, in welchem die generierten Karten abgelegt werden.
