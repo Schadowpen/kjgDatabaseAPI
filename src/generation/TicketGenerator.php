@@ -189,22 +189,75 @@ class TicketGenerator
             $this->bereiche = $this->databaseConnection->getBereicheJson();
         if ($this->eingaenge === null)
             $this->eingaenge = $this->databaseConnection->getEingaengeJson();
-        if ($this->kartenConfig === null) {
-            $this->kartenConfig = $this->databaseConnection->getKartenConfigJson();
-            if ($this->kartenConfig === false)
-                throw new \Exception("Could not read kartenConfig from database");
-        }
-        if ($this->kartenVorlage === null) {
-            $this->kartenVorlage = $this->databaseConnection->getKartenVorlageString();
-            if ($this->kartenVorlage === false)
-                throw new \Exception("Could not read kartenVorlage from database");
-        }
         if ($this->plaetze === null)
             $this->plaetze = $this->databaseConnection->getPlaetzeJson();
         if ($this->platzStatusse === null)
             $this->platzStatusse = $this->databaseConnection->getPlatzStatusseJson();
         if ($this->veranstaltung === null)
             $this->veranstaltung = $this->databaseConnection->getVeranstaltungJson();
+        // kartenConfig und Kartenvorlage hängen von den Vorstellungen ab, daher erst nach den platzStatussen laden
+        if ($this->kartenConfig === null || $this->kartenVorlage === null) {
+            $karte = $this->getKarteForVorgang();
+            if ($this->kartenConfig === null) {
+                $this->kartenConfig = $this->databaseConnection->getKartenConfigJson(true, $karte->config);
+                if ($this->kartenConfig === null)
+                    throw new \Exception("Could not read kartenConfig '{$karte->config}' from database");
+            }
+            if ($this->kartenVorlage === null) {
+                $this->kartenVorlage = $this->databaseConnection->getKartenVorlageString(true, $karte->vorlage);
+                if ($this->kartenVorlage === false)
+                    throw new \Exception("Could not read kartenVorlage '{$karte->vorlage}' from database");
+            }
+        }
+    }
+
+    /**
+     * Ermittelt anhand der Vorstellungen, in denen der Vorgang Plätze hat, welche Kartenvorlage und kartenConfig verwendet werden müssen.
+     * Eine Vorstellung kann in der vorstellungen.json über das Attribut "karte" (mit "vorlage" und "config") eine andere als die übliche
+     * kartenVorlage.pdf bzw. kartenConfig.json festlegen.
+     * @return object Objekt mit den Attributen "vorlage" und "config", welche die Dateinamen in der Datenbank enthalten
+     * @throws \Exception Wenn der Vorgang Plätze in Vorstellungen mit unterschiedlichen Kartenvorlagen hat
+     */
+    protected function getKarteForVorgang()
+    {
+        $standardKarte = (object)[
+            "vorlage" => "kartenVorlage.pdf",
+            "config" => "kartenConfig.json"
+        ];
+        $vorstellungen = $this->databaseConnection->getVorstellungenJson();
+        if ($vorstellungen === null)
+            throw new \Exception("Could not read vorstellungen from database");
+
+        $karte = null;
+        $karteVorstellung = null;
+        foreach ($this->platzStatusse as $platzStatus) {
+            if (@$platzStatus->vorgangsNr !== $this->vorgang->nummer)
+                continue;
+
+            // Karte der zugehörigen Vorstellung bestimmen
+            $vorstellungsKarte = clone $standardKarte;
+            foreach ($vorstellungen as $vorstellung) {
+                if ($vorstellung->date === $platzStatus->date && $vorstellung->time === $platzStatus->time) {
+                    if (isset($vorstellung->karte->vorlage))
+                        $vorstellungsKarte->vorlage = $vorstellung->karte->vorlage;
+                    if (isset($vorstellung->karte->config))
+                        $vorstellungsKarte->config = $vorstellung->karte->config;
+                    break;
+                }
+            }
+
+            if ($karte === null) {
+                $karte = $vorstellungsKarte;
+                $karteVorstellung = $platzStatus;
+            } elseif ($karte->vorlage !== $vorstellungsKarte->vorlage || $karte->config !== $vorstellungsKarte->config) {
+                throw new \Exception("Vorgang {$this->vorgang->nummer} enthält Plätze in Vorstellungen mit unterschiedlichen Kartenvorlagen "
+                    . "({$karteVorstellung->date} {$karteVorstellung->time}: {$karte->vorlage}, {$karte->config}; "
+                    . "{$platzStatus->date} {$platzStatus->time}: {$vorstellungsKarte->vorlage}, {$vorstellungsKarte->config}). "
+                    . "Theaterkarten für Vorstellungen mit unterschiedlichen Kartenvorlagen müssen in getrennten Vorgängen erstellt werden.");
+            }
+        }
+
+        return $karte ?? $standardKarte;
     }
 
     /**

@@ -312,22 +312,45 @@ class DatabaseConnection
      * Liefert den Inhalt der Datenbanktabelle "kartenConfig" als assoziatives Array.
      * Fehler, wenn die DatabaseConnection keinen Read- oder Writelock hat.
      * @param bool $echoErrors Ob etwaige Fehler direkt mit echo in die Ausgabe geschrieben werden sollen, default true
+     * @param string $databaseFile Dateiname der kartenConfig, falls eine Vorstellung eine andere als die übliche verwendet
      * @return array|null null wenn nicht erfolgreich, ansonsten den JSON-Inhalt als Objekt
      */
-    public function getKartenConfigJson($echoErrors = true)
+    public function getKartenConfigJson($echoErrors = true, $databaseFile = "kartenConfig.json")
     {
-        return $this->getDatabaseJson("kartenConfig.json", $echoErrors);
+        if (!$this->isPlainFileName($databaseFile, $echoErrors))
+            return null;
+        return $this->getDatabaseJson($databaseFile, $echoErrors);
     }
 
     /**
      * Liefert den Inhalt der Vorlage für Theaterkarten als String.
      * Fehler, wenn die DatabaseConnection keinen Read- oder Writelock hat.
      * @param bool $echoErrors Ob etwaige Fehler direkt mit echo in die Ausgabe geschrieben werden sollen, default true
+     * @param string $databaseFile Dateiname der Kartenvorlage, falls eine Vorstellung eine andere als die übliche verwendet
      * @return false|string false, wenn nicht erfolgreich, ansonsten den Inhalt als String
      */
-    public function getKartenVorlageString($echoErrors = true)
+    public function getKartenVorlageString($echoErrors = true, $databaseFile = "kartenVorlage.pdf")
     {
-        return $this->getDatabaseString("kartenVorlage.pdf", $echoErrors);
+        if (!$this->isPlainFileName($databaseFile, $echoErrors))
+            return false;
+        return $this->getDatabaseString($databaseFile, $echoErrors);
+    }
+
+    /**
+     * Überprüft, ob ein Dateiname direkt auf eine Datei im Datenbankordner verweist (also keine Pfadangaben wie "../" enthält).
+     * @param mixed $databaseFile Zu überprüfender Dateiname
+     * @param bool $echoErrors Ob etwaige Fehler direkt mit echo in die Ausgabe geschrieben werden sollen
+     * @return bool true, wenn der Dateiname gültig ist
+     */
+    protected function isPlainFileName($databaseFile, $echoErrors)
+    {
+        if (!is_string($databaseFile) || $databaseFile === "" || basename($databaseFile) !== $databaseFile
+            || strpos($databaseFile, "\\") !== false || $databaseFile === "." || $databaseFile === "..") {
+            if ($echoErrors)
+                echo "Error: Invalid database file name\n";
+            return false;
+        }
+        return true;
     }
 
     /**
